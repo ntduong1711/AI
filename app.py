@@ -1,91 +1,41 @@
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import streamlit as st
-from PIL import Image
+import tensorflow as tf
+from tensorflow.keras.models import load_model
+from PIL import Image, ImageOps
+import numpy as np
 
-# Mount Google Drive if needed
-# from google.colab import drive
-# drive.mount('/content/drive')
+# Load mô hình đã được huấn luyện
+model = load_model('model.h5')
 
-# Set paths for data
-data_train_path = '/content/drive/MyDrive/AI/Train'
-data_valid_path = '/content/drive/MyDrive/AI/Validation'
+# Định nghĩa hàm xử lý và dự đoán ảnh tải lên
+def predict_image(image):
+    size = (256, 256)  # Kích thước ảnh sau khi thay đổi kích thước
+    image = ImageOps.fit(image, size, Image.ANTIALIAS)
+    img = np.asarray(image)
+    img = img / 255.0  # Chuẩn hóa ảnh
+    img = np.expand_dims(img, axis=0)  # Thêm chiều batch
 
-# Constants
-img_width = 256
-img_height = 256
-batch_size = 32
+    # Dự đoán
+    prediction = model.predict(img)
+    return "Motorcycle" if prediction[0][0] < 0.5 else "Car"
 
-# Load data
-train_datagen = ImageDataGenerator(
-    rescale=1./255,
-    width_shift_range=0.1,
-    height_shift_range=0.1,
-    shear_range=0.1,
-    zoom_range=0.1,
-    horizontal_flip=True,
-    fill_mode='nearest')
+# Cấu hình trang
+st.set_page_config(page_title="Image Classification", layout="centered")
 
-valid_datagen = ImageDataGenerator(rescale=1./255)
+# Tiêu đề
+st.title("Phân loại ảnh: Xe máy hoặc Ô tô")
 
-train_generator = train_datagen.flow_from_directory(
-    data_train_path,
-    target_size=(img_width, img_height),
-    batch_size=batch_size,
-    class_mode='categorical')
-
-valid_generator = valid_datagen.flow_from_directory(
-    data_valid_path,
-    target_size=(img_width, img_height),
-    batch_size=batch_size,
-    class_mode='categorical')
-
-# Load model
-model = tf.keras.models.Sequential()
-model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(img_width, img_height, 3)))
-model.add(MaxPooling2D((2, 2)))
-model.add(Conv2D(64, (3, 3), activation='relu'))
-model.add(MaxPooling2D((2, 2)))
-model.add(Flatten())
-model.add(Dense(512, activation=tf.nn.relu))
-model.add(Dense(2, activation=tf.nn.softmax))
-model.compile(optimizer=RMSprop(learning_rate=0.001), loss='categorical_crossentropy', metrics=['accuracy'])
-
-# Load history
-history = None  # Define history if you want to display the history plot
-
-# Define labels
-labels = ['Ô tô', 'Xe máy']
-
-# Streamlit app
-st.title('Vehicle Classification')
-
-# Function to make predictions
-def make_prediction(image):
-    img = image.resize((256, 256))  # Resize image
-    img_array = np.array(img) / 255.0  # Convert to numpy array and normalize
-    img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
-    prediction = model.predict(img_array)
-    predicted_label = labels[np.argmax(prediction)]
-    return predicted_label
-
-# File uploader
-uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png"])
+# Tải ảnh lên
+st.subheader("Tải ảnh lên")
+uploaded_file = st.file_uploader("Chọn một ảnh...", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
+    # Hiển thị ảnh đã tải lên
     image = Image.open(uploaded_file)
-    st.image(image, caption='Uploaded Image.', use_column_width=True)
-    st.write("")
-    st.write("Classifying...")
-    prediction = make_prediction(image)
-    st.write('Prediction:', prediction)
+    st.image(image, caption='Ảnh đã tải lên', use_column_width=True)
 
-# Display history plot if available
-if history is not None:
-    st.subheader('Model Accuracy')
-    st.line_chart(history.history['accuracy'])
-    st.line_chart(history.history['val_accuracy'])
+    # Dự đoán ảnh
+    st.write("")
+    st.write("Đang phân loại...")
+    label = predict_image(image)
+    st.write(f"Ảnh đã tải lên là **{label}**.")
