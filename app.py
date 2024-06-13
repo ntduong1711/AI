@@ -3,8 +3,20 @@ import tensorflow as tf
 from tensorflow.keras.models import load_model
 from PIL import Image, ImageOps
 import numpy as np
+import gdown
+import os
 
-# Load mô hình đã được huấn luyện
+# URL của file mô hình trên Google Drive
+url = 'https://drive.google.com/file/d/1vjrd7w4bLy3aK3MrhIWrAF7sSSFdpR1D/view?usp=sharing'
+
+# Tên file lưu trữ mô hình trên máy chủ
+output = 'model1.h5'
+
+# Kiểm tra nếu file mô hình chưa tồn tại, tải về
+if not os.path.exists(output):
+    gdown.download(url, output, quiet=False)
+
+# Tải mô hình đã được huấn luyện
 model = load_model('model1.h5')
 
 # Định nghĩa hàm xử lý và dự đoán ảnh tải lên
