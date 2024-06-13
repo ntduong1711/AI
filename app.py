@@ -5,7 +5,7 @@ from PIL import Image, ImageOps
 import numpy as np
 
 # Load mô hình đã được huấn luyện
-model = load_model('model.h5')
+model = load_model('model1.h5')
 
 # Định nghĩa hàm xử lý và dự đoán ảnh tải lên
 def predict_image(image):
