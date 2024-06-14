@@ -1,53 +1,45 @@
 import streamlit as st
-import tensorflow as tf
-from tensorflow.keras.models import load_model
-from PIL import Image, ImageOps
-import numpy as np
 import gdown
+from PIL import Image
+import numpy as np
+import tensorflow as tf
 import os
 
-# URL của file mô hình trên Google Drive
-url = 'https://drive.google.com/file/d/1vjrd7w4bLy3aK3MrhIWrAF7sSSFdpR1D/view?usp=sharing'
+# Đường dẫn chia sẻ của tệp mô hình trên Google Drive
+model_url = 'https://drive.google.com/file/d/1MbKaItBuHEa-RcWekA3wd8BBU4t8QTtZ/view?usp=drive_link'
+model_path = 'model2.h5'
 
-# Tên file lưu trữ mô hình trên máy chủ
-output = 'model1.h5'
+# Tải mô hình từ Google Drive nếu chưa tồn tại
+if not os.path.exists(model_path):
+    gdown.download(model_url, model_path, quiet=False)
 
-# Kiểm tra nếu file mô hình chưa tồn tại, tải về
-if not os.path.exists(output):
-    gdown.download(url, output, quiet=False)
+# Tải mô hình đã huấn luyện
+model = tf.keras.models.load_model(model_path)
 
-# Tải mô hình đã được huấn luyện
-model = load_model('model1.h5')
-
-# Định nghĩa hàm xử lý và dự đoán ảnh tải lên
+# Hàm để dự đoán lớp của ảnh
 def predict_image(image):
-    size = (256, 256)  # Kích thước ảnh sau khi thay đổi kích thước
-    image = ImageOps.fit(image, size, Image.ANTIALIAS)
-    img = np.asarray(image)
-    img = img / 255.0  # Chuẩn hóa ảnh
-    img = np.expand_dims(img, axis=0)  # Thêm chiều batch
+    image = image.resize((224, 224))  # Điều chỉnh kích thước ảnh phù hợp với mô hình
+    image = np.array(image) / 255.0  # Chuẩn hóa giá trị ảnh
+    image = np.expand_dims(image, axis=0)  # Thêm một chiều để phù hợp với đầu vào của mô hình
+    predictions = model.predict(image)
+    return predictions
 
-    # Dự đoán
-    prediction = model.predict(img)
-    return "Motorcycle" if prediction[0][0] < 0.5 else "Car"
+# Giao diện Streamlit
+st.title("Nhận diện ô tô và xe máy")
+st.write("Vui lòng tải lên một hình ảnh để nhận diện.")
 
-# Cấu hình trang
-st.set_page_config(page_title="Image Classification", layout="centered")
-
-# Tiêu đề
-st.title("Phân loại ảnh: Xe máy hoặc Ô tô")
-
-# Tải ảnh lên
-st.subheader("Tải ảnh lên")
-uploaded_file = st.file_uploader("Chọn một ảnh...", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("Chọn một tệp ảnh", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
-    # Hiển thị ảnh đã tải lên
     image = Image.open(uploaded_file)
-    st.image(image, caption='Ảnh đã tải lên', use_column_width=True)
+    st.image(image, caption="Ảnh đã tải lên", use_column_width=True)
+    
+    st.write("Đang phân tích...")
+    
+    predictions = predict_image(image)
+    class_names = ['Car', 'Motorbike']  # Đặt tên lớp phù hợp với mô hình của bạn
+    predicted_class = class_names[np.argmax(predictions)]
+    
+    st.write(f"Loại phương tiện: {predicted_class}")
+    st.write(f"Độ chính xác: {np.max(predictions):.2f}")
 
-    # Dự đoán ảnh
-    st.write("")
-    st.write("Đang phân loại...")
-    label = predict_image(image)
-    st.write(f"Ảnh đã tải lên là **{label}**.")
